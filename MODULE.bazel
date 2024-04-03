@@ -2,9 +2,13 @@
 
 module(
     name = "rules_rust",
-    version = "0.36.2",
+    version = "0.41.1",
 )
 
+bazel_dep(
+    name = "bazel_features",
+    version = "1.9.1",
+)
 bazel_dep(
     name = "bazel_skylib",
     version = "1.5.0",
@@ -18,12 +22,16 @@ bazel_dep(
     version = "0.0.9",
 )
 bazel_dep(
+    name = "rules_license",
+    version = "0.0.8",
+)
+bazel_dep(
     name = "rules_proto",
     version = "5.3.0-21.7",
 )
 bazel_dep(
     name = "apple_support",
-    version = "1.11.1",
+    version = "1.13.0",
     repo_name = "build_bazel_apple_support",
 )
 bazel_dep(
@@ -32,7 +40,18 @@ bazel_dep(
     repo_name = "com_google_protobuf",
 )
 
-internal_deps = use_extension("//rust/private:extensions.bzl", "internal_deps")
+bazel_dep(
+    name = "rules_python",
+    version = "0.31.0",
+    dev_dependency = True,
+)
+bazel_dep(
+    name = "rules_testing",
+    version = "0.6.0",
+    dev_dependency = True,
+)
+
+internal_deps = use_extension("//rust/private:extensions.bzl", "i")
 use_repo(
     internal_deps,
     "bazelci_rules",
@@ -48,7 +67,7 @@ use_repo(
     "cui__cargo-lock-9.0.0",
     "cui__cargo-platform-0.1.4",
     "cui__cargo_metadata-0.18.1",
-    "cui__cargo_toml-0.17.1",
+    "cui__cargo_toml-0.19.2",
     "cui__cfg-expr-0.15.5",
     "cui__clap-4.3.11",
     "cui__crates-index-2.2.0",
@@ -64,11 +83,12 @@ use_repo(
     "cui__serde_json-1.0.108",
     "cui__serde_starlark-0.1.14",
     "cui__sha2-0.10.8",
+    "cui__spdx-0.10.3",
     "cui__spectral-0.6.0",
     "cui__tempfile-3.8.1",
     "cui__tera-1.19.1",
     "cui__textwrap-0.16.0",
-    "cui__toml-0.8.6",
+    "cui__toml-0.8.10",
     "cui__tracing-0.1.40",
     "cui__tracing-subscriber-0.3.17",
     "generated_inputs_in_external_repo",
@@ -97,15 +117,16 @@ use_repo(
     "rules_rust_prost__tokio-1.28.2",
     "rules_rust_prost__tokio-stream-0.1.14",
     "rules_rust_prost__tonic-0.9.2",
+    "rules_rust_proto__grpc-0.6.2",
+    "rules_rust_proto__grpc-compiler-0.6.2",
+    "rules_rust_proto__log-0.4.17",
+    "rules_rust_proto__protobuf-2.8.2",
+    "rules_rust_proto__protobuf-codegen-2.8.2",
+    "rules_rust_proto__tls-api-0.1.22",
+    "rules_rust_proto__tls-api-stub-0.1.22",
     "rules_rust_test_load_arbitrary_tool",
     "rules_rust_tinyjson",
     "rules_rust_toolchain_test_target_json",
-    "rules_rust_util_import__aho-corasick-0.7.15",
-    "rules_rust_util_import__lazy_static-1.4.0",
-    "rules_rust_util_import__proc-macro2-1.0.33",
-    "rules_rust_util_import__quickcheck-1.0.3",
-    "rules_rust_util_import__quote-1.0.10",
-    "rules_rust_util_import__syn-1.0.82",
     "rules_rust_wasm_bindgen__anyhow-1.0.71",
     "rules_rust_wasm_bindgen__assert_cmd-1.0.8",
     "rules_rust_wasm_bindgen__diff-0.1.13",
@@ -121,9 +142,9 @@ use_repo(
     "rules_rust_wasm_bindgen__tempfile-3.6.0",
     "rules_rust_wasm_bindgen__ureq-2.8.0",
     "rules_rust_wasm_bindgen__walrus-0.20.3",
-    "rules_rust_wasm_bindgen__wasm-bindgen-0.2.89",
-    "rules_rust_wasm_bindgen__wasm-bindgen-cli-support-0.2.89",
-    "rules_rust_wasm_bindgen__wasm-bindgen-shared-0.2.89",
+    "rules_rust_wasm_bindgen__wasm-bindgen-0.2.91",
+    "rules_rust_wasm_bindgen__wasm-bindgen-cli-support-0.2.91",
+    "rules_rust_wasm_bindgen__wasm-bindgen-shared-0.2.91",
     "rules_rust_wasm_bindgen__wasmparser-0.102.0",
     "rules_rust_wasm_bindgen__wasmprinter-0.2.60",
     "rules_rust_wasm_bindgen_cli",
@@ -135,6 +156,21 @@ use_repo(rust, "rust_toolchains")
 
 register_toolchains(
     "@rust_toolchains//:all",
+)
+
+register_toolchains(
+    "//proto/protobuf:default-proto-toolchain",
+    dev_dependency = True,
+)
+
+register_toolchains(
+    "//proto/prost:default_prost_toolchain",
+    dev_dependency = True,
+)
+
+register_toolchains(
+    "//bindgen:default_bindgen_toolchain",
+    dev_dependency = True,
 )
 
 use_repo(rust, "rust_host_tools")

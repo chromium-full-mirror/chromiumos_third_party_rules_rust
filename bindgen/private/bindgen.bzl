@@ -69,13 +69,13 @@ def rust_bindgen_library(
 
     sub_tags = tags + ([] if "manual" in tags else ["manual"])
 
-    deps = kwargs.get("deps") or []
-    if "deps" in kwargs:
-        kwargs.pop("deps")
-
     bindgen_kwargs = {}
-    if "leak_symbols" in kwargs:
-        bindgen_kwargs.update({"leak_symbols": kwargs.pop("leak_symbols")})
+    for shared in (
+        "target_compatible_with",
+        "exec_compatible_with",
+    ):
+        if shared in kwargs:
+            bindgen_kwargs.update({shared: kwargs[shared]})
 
     rust_bindgen(
         name = name + "__bindgen",
@@ -88,8 +88,11 @@ def rust_bindgen_library(
         **bindgen_kwargs
     )
 
-    for custom_tag in ["__bindgen", "no-clippy", "no-rustfmt"]:
-        tags = tags + ([] if custom_tag in tags else [custom_tag])
+    tags = depset(tags + ["__bindgen", "no-clippy", "no-rustfmt"]).to_list()
+
+    deps = kwargs.get("deps") or []
+    if "deps" in kwargs:
+        kwargs.pop("deps")
 
     rust_library(
         name = name,
@@ -98,6 +101,14 @@ def rust_bindgen_library(
         tags = tags,
         **kwargs
     )
+
+def _get_user_link_flags(cc_lib):
+    linker_flags = []
+
+    for linker_input in cc_lib[CcInfo].linking_context.linker_inputs.to_list():
+        linker_flags.extend(linker_input.user_link_flags)
+
+    return linker_flags
 
 def _generate_cc_link_build_info(ctx, cc_lib):
     """Produce the eqivilant cargo_build_script providers for use in linking the library.
@@ -110,33 +121,30 @@ def _generate_cc_link_build_info(ctx, cc_lib):
         The `BuildInfo` provider.
     """
     compile_data = []
-    linker_flags = []
+
+    rustc_flags = []
     linker_search_paths = []
 
     for linker_input in cc_lib[CcInfo].linking_context.linker_inputs.to_list():
         for lib in linker_input.libraries:
             if lib.static_library:
-                linker_flags.append("-lstatic={}".format(get_lib_name_default(lib.static_library)))
+                rustc_flags.append("-lstatic={}".format(get_lib_name_default(lib.static_library)))
                 linker_search_paths.append(lib.static_library.dirname)
                 compile_data.append(lib.static_library)
             elif lib.pic_static_library:
-                linker_flags.append("-lstatic={}".format(get_lib_name_default(lib.pic_static_library)))
+                rustc_flags.append("-lstatic={}".format(get_lib_name_default(lib.pic_static_library)))
                 linker_search_paths.append(lib.pic_static_library.dirname)
                 compile_data.append(lib.pic_static_library)
-
-        if linker_input.user_link_flags:
-            linker_flags.append("-C")
-            linker_flags.append("link-args={}".format(" ".join(linker_input.user_link_flags)))
 
     if not compile_data:
         fail("No static libraries found in {}".format(
             cc_lib.label,
         ))
 
-    link_flags = ctx.actions.declare_file("{}.link_flags".format(ctx.label.name))
+    rustc_flags_file = ctx.actions.declare_file("{}.rustc_flags".format(ctx.label.name))
     ctx.actions.write(
-        output = link_flags,
-        content = "\n".join(linker_flags),
+        output = rustc_flags_file,
+        content = "\n".join(rustc_flags),
     )
 
     link_search_paths = ctx.actions.declare_file("{}.link_search_paths".format(ctx.label.name))
@@ -151,8 +159,9 @@ def _generate_cc_link_build_info(ctx, cc_lib):
     return BuildInfo(
         compile_data = depset(compile_data),
         dep_env = None,
-        flags = None,
-        link_flags = link_flags,
+        flags = rustc_flags_file,
+        # linker_flags is provided via CcInfo
+        linker_flags = None,
         link_search_paths = link_search_paths,
         out_dir = None,
         rustc_env = None,
@@ -275,16 +284,22 @@ def _rust_bindgen_impl(ctx):
         tools = tools,
     )
 
-    if ctx.attr.leak_symbols:
-        # buildifier: disable=print
-        print("WARN: rust_bindgen.leak_symbols is set to True for {} - please file an issue at https://github.com/bazelbuild/rules_rust/issues explaining why this was necessary, as this support will be removed soon.".format(ctx.label))
-        providers = [cc_common.merge_cc_infos(
-            direct_cc_infos = [cc_lib[CcInfo]],
-        )]
-    else:
-        providers = [_generate_cc_link_build_info(ctx, cc_lib)]
-
-    return providers + [
+    return [
+        _generate_cc_link_build_info(ctx, cc_lib),
+        # As in https://github.com/bazelbuild/rules_rust/pull/2361, we want
+        # to link cc_lib to the direct parent (rlib) using `-lstatic=<cc_lib>`
+        # rustc flag. Hence, we do not need to provide the whole CcInfo of
+        # cc_lib because it will cause the downstream binary to link the cc_lib
+        # again. The CcInfo here only contains the custom link flags (i.e.
+        # linkopts attribute) specified by users in cc_lib.
+        CcInfo(
+            linking_context = cc_common.create_linking_context(
+                linker_inputs = depset([cc_common.create_linker_input(
+                    owner = ctx.label,
+                    user_link_flags = _get_user_link_flags(cc_lib),
+                )]),
+            ),
+        ),
         OutputGroupInfo(
             bindgen_bindings = depset([output]),
         ),
@@ -309,13 +324,6 @@ rust_bindgen = rule(
             doc = "The `.h` file to generate bindings for.",
             allow_single_file = True,
             mandatory = True,
-        ),
-        "leak_symbols": attr.bool(
-            doc = (
-                "If True, `cc_lib` will be exposed and linked into all downstream consumers of the target vs. the " +
-                "`rust_library` directly consuming it."
-            ),
-            default = False,
         ),
         "_cc_toolchain": attr.label(
             default = Label("@bazel_tools//tools/cpp:current_cc_toolchain"),

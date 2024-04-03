@@ -1,18 +1,22 @@
 {
-  "checksum": "9b3b52595cbfd5a7e7c7e0ec981021ffb1a84be75ad6c826428f91e87180c5a3",
+  "checksum": "620ec96c83b0f41f7965c1c4e3c2ac9a3588f79eb37233c76d3ac309487c3215",
   "crates": {
     "direct-cargo-bazel-deps 0.0.1": {
       "name": "direct-cargo-bazel-deps",
       "version": "0.0.1",
+      "package_url": null,
       "repository": null,
       "targets": [
         {
           "Library": {
             "crate_name": "direct_cargo_bazel_deps",
             "crate_root": ".direct_cargo_bazel_deps.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
           }
         }
       ],
@@ -33,14 +37,17 @@
         "edition": "2018",
         "version": "0.0.1"
       },
-      "license": null
+      "license": null,
+      "license_ids": [],
+      "license_file": null
     },
     "test_data_passing_crate 0.1.0": {
       "name": "test_data_passing_crate",
       "version": "0.1.0",
+      "package_url": "https://github.com/bazelbuild/rules_rust",
       "repository": {
         "Http": {
-          "url": "https://crates.io/api/v1/crates/test_data_passing_crate/0.1.0/download",
+          "url": "https://static.crates.io/crates/test_data_passing_crate/0.1.0/download",
           "sha256": "08c67aba3a29c3dc187eaf8080107404abfaee1ae893a02c43a362343ca73286"
         }
       },
@@ -49,18 +56,24 @@
           "Library": {
             "crate_name": "test_data_passing_crate",
             "crate_root": "src/lib.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
           }
         },
         {
           "BuildScript": {
             "crate_name": "build_script_build",
             "crate_root": "build.rs",
-            "srcs": [
-              "**/*.rs"
-            ]
+            "srcs": {
+              "allow_empty": false,
+              "include": [
+                "**/*.rs"
+              ]
+            }
           }
         }
       ],
@@ -86,7 +99,11 @@
           "**"
         ]
       },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": null
     }
   },
   "binary_crates": [],

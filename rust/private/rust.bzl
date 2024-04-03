@@ -528,10 +528,6 @@ RUSTC_ATTRS = {
     "_extra_rustc_flags": attr.label(
         default = Label("//:extra_rustc_flags"),
     ),
-    "_import_macro_dep": attr.label(
-        default = Label("//util/import"),
-        cfg = "exec",
-    ),
     "_is_proc_macro_dep": attr.label(
         default = Label("//rust/private:is_proc_macro_dep"),
     ),
@@ -683,6 +679,10 @@ _common_attrs = {
             is the root of the crate to be passed to rustc to build this crate.
         """),
         allow_files = [".rs"],
+        # Allow use of --compile_one_dependency with rust targets. Support for this feature for
+        # non-builtin rulesets is undocumented outside of the bazel source:
+        # https://github.com/bazelbuild/bazel/blob/7.1.1/src/main/java/com/google/devtools/build/lib/packages/Attribute.java#L102
+        flags = ["DIRECT_COMPILE_TIME_INPUT"],
     ),
     "stamp": _stamp_attribute(
         default_value = 0,
@@ -797,7 +797,6 @@ rust_library = rule(
         ),
     }.items()),
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     toolchains = [
         str(Label("//rust:toolchain_type")),
         "@bazel_tools//tools/cpp:toolchain_type",
@@ -895,7 +894,6 @@ rust_static_library = rule(
         ),
     }.items()),
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     cfg = _rust_static_library_transition,
     toolchains = [
         str(Label("//rust:toolchain_type")),
@@ -943,7 +941,6 @@ rust_shared_library = rule(
         "_use_grep_includes": attr.bool(default = True),
     }.items()),
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     cfg = _rust_shared_library_transition,
     toolchains = [
         str(Label("//rust:toolchain_type")),
@@ -998,7 +995,6 @@ rust_proc_macro = rule(
         ),
     ),
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     toolchains = [
         str(Label("//rust:toolchain_type")),
         "@bazel_tools//tools/cpp:toolchain_type",
@@ -1077,7 +1073,6 @@ rust_binary = rule(
     }.items()),
     executable = True,
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     cfg = _rust_binary_transition,
     toolchains = [
         str(Label("//rust:toolchain_type")),
@@ -1220,7 +1215,6 @@ rust_binary_without_process_wrapper = rule(
     }.items()),
     executable = True,
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     cfg = _rust_binary_transition,
     toolchains = [
         str(Label("//rust:toolchain_type")),
@@ -1233,7 +1227,6 @@ rust_library_without_process_wrapper = rule(
     provides = COMMON_PROVIDERS,
     attrs = dict(_common_attrs_for_binary_without_process_wrapper(_common_attrs).items()),
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     toolchains = [
         str(Label("//rust:toolchain_type")),
         "@bazel_tools//tools/cpp:toolchain_type",
@@ -1269,7 +1262,6 @@ rust_test = rule(
     }.items()),
     executable = True,
     fragments = ["cpp"],
-    host_fragments = ["cpp"],
     cfg = _rust_test_transition,
     test = True,
     toolchains = [

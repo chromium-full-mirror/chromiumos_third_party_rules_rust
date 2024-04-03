@@ -4,10 +4,10 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//bindgen:repositories.bzl", "rust_bindgen_dependencies")
 load("//crate_universe:repositories.bzl", "crate_universe_dependencies")
 load("//proto/prost:repositories.bzl", "rust_prost_dependencies")
+load("//proto/protobuf:repositories.bzl", "rust_proto_protobuf_dependencies")
 load("//rust/private:repository_utils.bzl", "TINYJSON_KWARGS")
 load("//test:deps.bzl", "rules_rust_test_deps")
 load("//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
-load("//util/import:deps.bzl", "import_deps")
 load("//wasm_bindgen:repositories.bzl", "rust_wasm_bindgen_dependencies")
 
 def _internal_deps_impl(module_ctx):
@@ -21,9 +21,9 @@ def _internal_deps_impl(module_ctx):
 
     direct_deps.extend(crate_universe_dependencies())
     direct_deps.extend(rust_prost_dependencies(bzlmod = True))
+    direct_deps.extend(rust_proto_protobuf_dependencies(bzlmod = True))
     direct_deps.extend(rust_bindgen_dependencies())
     direct_deps.extend(rust_analyzer_dependencies())
-    direct_deps.extend(import_deps())
     direct_deps.extend(rust_wasm_bindgen_dependencies())
     direct_deps.extend(rules_rust_test_deps())
 
@@ -43,7 +43,9 @@ def _internal_deps_impl(module_ctx):
         root_module_direct_dev_deps = [],
     )
 
-internal_deps = module_extension(
+# This is named a single character to reduce the size of path names when running build scripts, to reduce the chance
+# of hitting the 260 character windows path name limit.
+i = module_extension(
     doc = "Dependencies for rules_rust",
     implementation = _internal_deps_impl,
 )
