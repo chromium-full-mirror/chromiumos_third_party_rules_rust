@@ -14,6 +14,7 @@
 
 """Rust rule implementations"""
 
+load("@@//bazel/module_extensions/toolchains/hermetic_launcher:hermetic_launcher.bzl", "HERMETIC_ATTRS")
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//rust/private:common.bzl", "COMMON_PROVIDERS", "rust_common")
 load("//rust/private:providers.bzl", "BuildInfo")
@@ -1061,7 +1062,7 @@ _rust_binary_transition = transition(
 rust_binary = rule(
     implementation = _rust_binary_impl,
     provides = COMMON_PROVIDERS,
-    attrs = dict(_common_attrs.items() + _rust_binary_attrs.items() + {
+    attrs = dict(_common_attrs.items() + _rust_binary_attrs.items() + HERMETIC_ATTRS.items() + {
         "platform": attr.label(
             doc = "Optional platform to transition the binary to.",
             default = None,
@@ -1069,6 +1070,7 @@ rust_binary = rule(
         "_allowlist_function_transition": attr.label(
             default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
         ),
+        "use_hermetic_launcher": attr.label(default = "@@//bazel/module_extensions/toolchains/rust:use_hermetic_launcher"),
     }.items()),
     executable = True,
     fragments = ["cpp"],

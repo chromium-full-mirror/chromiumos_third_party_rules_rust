@@ -14,6 +14,7 @@
 
 """Functionality for constructing actions that invoke the Rust compiler"""
 
+load("@@//bazel/module_extensions/toolchains/hermetic_launcher:hermetic_launcher.bzl", "hermetic_defaultinfo")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
     "@bazel_tools//tools/build_defs/cc:action_names.bzl",
@@ -1143,6 +1144,18 @@ def rustc_compile_action(
             - (DepInfo): The transitive dependencies of this crate.
             - (DefaultInfo): The output file for this crate, and its runfiles.
     """
+    use_hermetic_launcher = hasattr(ctx.attr, "use_hermetic_launcher") and \
+                            ctx.attr.use_hermetic_launcher[BuildSettingInfo].value and \
+                            crate_info_dict and \
+                            "output" in crate_info_dict
+
+    if use_hermetic_launcher:
+        hermetic_wrapper = crate_info_dict["output"]
+        crate_info_dict["output"] = ctx.actions.declare_file(
+            "_%s_real" % hermetic_wrapper.basename,
+            sibling = hermetic_wrapper,
+        )
+
     crate_info = rust_common.create_crate_info(**crate_info_dict)
 
     build_metadata = crate_info_dict.get("metadata", None)
@@ -1469,14 +1482,24 @@ def rustc_compile_action(
             "metadata_files": coverage_runfiles + [executable] if executable else [],
         })
 
-    providers = [
-        DefaultInfo(
+    if use_hermetic_launcher:
+        default_info = hermetic_defaultinfo(
+            ctx,
             # nb. This field is required for cc_library to depend on our output.
             files = depset(outputs),
             runfiles = runfiles,
             executable = executable,
-        ),
-    ]
+            out = hermetic_wrapper,
+        )
+    else:
+        default_info = DefaultInfo(
+            # nb. This field is required for cc_library to depend on our output.
+            files = depset(outputs),
+            runfiles = runfiles,
+            executable = executable,
+        )
+
+    providers = [default_info]
 
     # When invoked by aspects (and when running `bazel coverage`), the
     # baseline_coverage.dat created here will conflict with the baseline_coverage.dat of the
